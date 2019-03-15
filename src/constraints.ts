@@ -1,32 +1,20 @@
-import * as fs from 'fs';
 import * as path from 'path';
 
 import {DependencyType} from './constants';
 import {ConstraintProcessor} from './constraint-processor';
-import {WorkspaceInfo, PackageInfo} from './workspace';
-
-function exists(filepath: string): Promise<boolean> {
-  return new Promise(resolve => fs.exists(filepath, resolve));
-}
-
-function readFile(filepath: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    fs.readFile(filepath, (err, contents) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(String(contents));
-      }
-    });
-  });
-}
+import {readFile} from './util';
+import {PackageInfo, WorkspaceInfo} from './workspace';
 
 async function loadConstraints(directory: string) {
   for (const filename of ['constraints.pl', 'constraints.pro']) {
     let filepath = path.join(directory, filename);
 
-    if (await exists(filepath)) {
-      return readFile(filepath);
+    try {
+      return await readFile(filepath, 'utf8');
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw e;
+      }
     }
   }
 

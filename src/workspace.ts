@@ -1,10 +1,10 @@
 import * as execa from 'execa';
 import * as findUp from 'find-up';
-import * as fs from 'fs';
 import * as JSON from 'json5';
 import * as path from 'path';
 import {defer, forkJoin, from, Observable} from 'rxjs';
 import {map, mapTo, mergeMap, tap} from 'rxjs/operators';
+import {readFile} from './util';
 
 export interface PackageInfo {
   packageName: string;
@@ -47,16 +47,8 @@ function execYarn(args: string[], cwd: string): Observable<string> {
       .pipe(map(result => result.stdout));
 }
 
-function readJson(filepath: string): Promise<PackageJson> {
-  return new Promise<PackageJson>((resolve, reject) => {
-    fs.readFile(filepath, (err, result) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(JSON.parse(String(result)));
-      }
-    });
-  });
+async function readJson(filepath: string): Promise<PackageJson> {
+  return JSON.parse(await readFile(filepath, 'utf8'));
 }
 
 async function getWorkspaceRoot(cwd: string): Promise<string> {
