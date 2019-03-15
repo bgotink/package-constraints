@@ -38,54 +38,52 @@ export default (concierge: any) =>
 
           const workspaceInfo = await getWorkspace(cwd).toPromise();
           const constraints = new Constraints(cwd, workspaceInfo);
-          const result = await constraints.process();
+          const processor = await constraints.process();
 
           let hasError = false;
 
-          for (const {packageName,
-                      dependencyName,
-                      dependencyRange,
-                      dependencyType} of result.enforcedDependencyRanges) {
-            const deps = workspaceInfo[packageName][dependencyType];
-            const descriptor = deps && deps[dependencyName];
+          await processor.enforcedDependencyRanges.forEach(
+              ({packageName, dependencyName, dependencyRange, dependencyType}) => {
+                const deps = workspaceInfo[packageName][dependencyType];
+                const descriptor = deps && deps[dependencyName];
 
-            if (dependencyRange !== null) {
-              if (!descriptor) {
-                hasError = true;
-                console.error(`${markPackageIdent(packageName)} must depend on ${
-                    markPackageIdent(dependencyName)} version ${markVersion(dependencyRange)} via ${
-                    dependencyType}, but doesn't`);
-              } else {
-                if (descriptor !== dependencyRange) {
-                  hasError = true;
-                  console.error(`${markPackageIdent(packageName)} must depend on ${
-                      markPackageIdent(dependencyName)} version ${
-                      markVersion(dependencyRange)}, but uses ${markVersion(descriptor)} instead`);
+                if (dependencyRange !== null) {
+                  if (!descriptor) {
+                    hasError = true;
+                    console.error(`${markPackageIdent(packageName)} must depend on ${
+                        markPackageIdent(dependencyName)} version ${
+                        markVersion(dependencyRange)} via ${dependencyType}, but doesn't`);
+                  } else {
+                    if (descriptor !== dependencyRange) {
+                      hasError = true;
+                      console.error(`${markPackageIdent(packageName)} must depend on ${
+                          markPackageIdent(
+                              dependencyName)} version ${markVersion(dependencyRange)}, but uses ${
+                          markVersion(descriptor)} instead`);
+                    }
+                  }
+                } else {
+                  if (descriptor) {
+                    hasError = true;
+                    console.error(
+                        `${markPackageIdent(packageName)} has an extraneous dependency on ${
+                            markPackageIdent(dependencyName)}`);
+                  }
                 }
-              }
-            } else {
-              if (descriptor) {
-                hasError = true;
-                console.error(`${markPackageIdent(packageName)} has an extraneous dependency on ${
-                    markPackageIdent(dependencyName)}`);
-              }
-            }
-          }
+              });
 
-          for (const {packageName,
-                      dependencyName,
-                      dependencyType,
-                      reason} of result.invalidDependencies) {
-            const deps = workspaceInfo[packageName][dependencyType];
-            const dependencyDescriptor = deps && deps[dependencyName];
+          await processor.invalidDependencies.forEach(
+              ({packageName, dependencyName, dependencyType, reason}) => {
+                const deps = workspaceInfo[packageName][dependencyType];
+                const dependencyDescriptor = deps && deps[dependencyName];
 
-            if (dependencyDescriptor) {
-              hasError = true;
-              console.error(`${markPackageIdent(packageName)} has an invalid dependency on ${
-                  markPackageIdent(
-                      dependencyName)} (invalid because ${markReason(String(reason))})`);
-            }
-          }
+                if (dependencyDescriptor) {
+                  hasError = true;
+                  console.error(`${markPackageIdent(packageName)} has an invalid dependency on ${
+                      markPackageIdent(
+                          dependencyName)} (invalid because ${markReason(String(reason))})`);
+                }
+              });
 
           return hasError ? 1 : 0;
         });

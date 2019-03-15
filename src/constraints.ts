@@ -1,30 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import {map, toArray} from 'rxjs/operators';
 
-import {Engine} from './engine';
-import {sortMap} from './util';
-import {WorkspaceInfo} from './workspace';
-
-export const enum DependencyType {
-  Dependencies = 'dependencies',
-  PeerDependencies = 'peerDependencies',
-  DevDependencies = 'devDependencies',
-}
-
-export interface EnforcedDependencyRange {
-  packageName: string;
-  dependencyName: string;
-  dependencyRange: string|null;
-  dependencyType: DependencyType;
-}
-
-export interface InvalidDependency {
-  packageName: string;
-  dependencyName: string;
-  dependencyType: DependencyType;
-  reason: string|null;
-}
+import {DependencyType} from './constants';
+import {ConstraintProcessor} from './constraint-processor';
+import {WorkspaceInfo, PackageInfo} from './workspace';
 
 function exists(filepath: string): Promise<boolean> {
   return new Promise(resolve => fs.exists(filepath, resolve));
@@ -54,6 +33,16 @@ async function loadConstraints(directory: string) {
   throw new Error(`Couldn't find constraints.pl or constraints.pro to load in ${directory}`);
 }
 
+function sortByName(a: PackageInfo, b: PackageInfo): number {
+  const aName = a.packageName;
+  const bName = b.packageName;
+
+  if (aName === bName) {
+    return 0;
+  }
+  return aName < bName ? -1 : 1;
+}
+
 export class Constraints {
   public readonly source: Promise<string>;
 
@@ -72,7 +61,7 @@ export class Constraints {
     consult`dependency_type(${DependencyType.DevDependencies}).`;
     consult`dependency_type(${DependencyType.PeerDependencies}).`;
 
-    for (const workspace of Object.values(this.workspace)) {
+    for (const workspace of Object.values(this.workspace).sort(sortByName)) {
       consult`package(${escape(workspace.packageName)}).`;
       consult`package_location(${escape(workspace.packageName)}, ${escape(workspace.location)}).`;
       consult`package_version(${escape(workspace.packageName)}, ${escape(workspace.version)}).`;
@@ -108,65 +97,12 @@ export class Constraints {
   }
 
   async getFullSource(): Promise<string> {
-    return this.getProjectDatabase() + `\n` + await this.source + `\n` + this.getDeclarations() + '\n';
+    return this.getProjectDatabase() + `\n` + await this.source + `\n` + this.getDeclarations() +
+        '\n';
   }
 
   async process() {
-    const engine = new Engine();
-    engine.consult(await this.getFullSource());
-
-    const enforcedDependencyRanges =
-        await engine
-            .query(
-                `package(PackageName), dependency_type(DependencyType), gen_enforced_dependency_range(PackageName, DependencyName, DependencyRange, DependencyType).`)
-            .pipe(
-                map(answer => {
-                  const packageName = answer.PackageName;
-                  const dependencyName = answer.DependencyName;
-                  const dependencyRange = answer.DependencyRange;
-                  const dependencyType = answer.DependencyType;
-
-                  if (packageName === null || dependencyName === null) {
-                    throw new Error(`Invalid rule`);
-                  }
-
-                  return {packageName, dependencyName, dependencyRange, dependencyType};
-                }),
-                toArray<EnforcedDependencyRange>(),
-                sortMap([
-                  ({dependencyRange}) => dependencyRange !== null ? `0` : `1`,
-                  ({packageName}) => packageName,
-                  ({dependencyName: dependencyIdent}) => dependencyIdent,
-                ]),
-                )
-            .toPromise();
-
-    const invalidDependencies =
-        await engine
-            .query(
-                `package(PackageName), dependency_type(DependencyType), gen_invalid_dependency(PackageName, DependencyName, DependencyType, Reason).`)
-            .pipe(
-                map(answer => {
-                  const packageName = answer.PackageName;
-                  const dependencyName = answer.DependencyName;
-                  const dependencyType = answer.DependencyType;
-                  const reason = answer.links.Reason;
-
-                  if (packageName === null || dependencyName === null) {
-                    throw new Error(`Invalid rule`);
-                  }
-
-                  return {packageName, dependencyName, dependencyType, reason};
-                }),
-                toArray<InvalidDependency>(),
-                sortMap([
-                  ({packageName}) => packageName,
-                  ({dependencyName: dependencyIdent}) => dependencyIdent,
-                ]),
-                )
-            .toPromise();
-
-    return {enforcedDependencyRanges, invalidDependencies};
+    return new ConstraintProcessor(await this.getFullSource());
   }
 }
 
