@@ -7,7 +7,7 @@ export class Engine {
   private session: pl.type.Session;
 
   public constructor() {
-    this.session = pl.create();
+    this.session = pl.create(1_000_000);
   }
 
   consult(program: string): void {

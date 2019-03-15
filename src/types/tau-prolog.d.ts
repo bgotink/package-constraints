@@ -26,7 +26,7 @@ declare module 'tau-prolog' {
 
     function format_answer(answer: Answer): string;
 
-    function create(): type.Session;
+    function create(limit?: number): type.Session;
   }
 
   export = tau;
