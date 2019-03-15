@@ -108,7 +108,7 @@ export class Constraints {
   }
 
   async getFullSource(): Promise<string> {
-    return this.getProjectDatabase() + `\n` + await this.source + `\n` + this.getDeclarations();
+    return this.getProjectDatabase() + `\n` + await this.source + `\n` + this.getDeclarations() + '\n';
   }
 
   async process() {
