@@ -15,6 +15,7 @@ function markPackageIdent(packageIdent: string): string {
 }
 const markVersion = chalk.bold.hex('#00afaf');
 const markReason = chalk.bold;
+const markError = chalk.bold.hex('#d64040');
 
 export default (concierge: any) =>
     concierge
@@ -40,7 +41,7 @@ export default (concierge: any) =>
           const constraints = new Constraints(cwd, workspaceInfo);
           const processor = await constraints.process();
 
-          let hasError = false;
+          let errorCount = 0;
 
           await processor.enforcedDependencyRanges.forEach(
               ({packageName, dependencyName, dependencyRange, dependencyType}) => {
@@ -49,13 +50,13 @@ export default (concierge: any) =>
 
                 if (dependencyRange !== null) {
                   if (!descriptor) {
-                    hasError = true;
+                    errorCount++;
                     console.error(`${markPackageIdent(packageName)} must depend on ${
                         markPackageIdent(dependencyName)} version ${
                         markVersion(dependencyRange)} via ${dependencyType}, but doesn't`);
                   } else {
                     if (descriptor !== dependencyRange) {
-                      hasError = true;
+                      errorCount++;
                       console.error(`${markPackageIdent(packageName)} must depend on ${
                           markPackageIdent(
                               dependencyName)} version ${markVersion(dependencyRange)}, but uses ${
@@ -64,7 +65,7 @@ export default (concierge: any) =>
                   }
                 } else {
                   if (descriptor) {
-                    hasError = true;
+                    errorCount++;
                     console.error(
                         `${markPackageIdent(packageName)} has an extraneous dependency on ${
                             markPackageIdent(dependencyName)}`);
@@ -78,12 +79,18 @@ export default (concierge: any) =>
                 const dependencyDescriptor = deps && deps[dependencyName];
 
                 if (dependencyDescriptor) {
-                  hasError = true;
+                  errorCount++;
                   console.error(`${markPackageIdent(packageName)} has an invalid dependency on ${
                       markPackageIdent(
                           dependencyName)} (invalid because ${markReason(String(reason))})`);
                 }
               });
 
-          return hasError ? 1 : 0;
+          if (errorCount > 0) {
+            console.error(`Found ${markError(`${errorCount} errors`)}`);
+            return 1;
+          } else {
+            console.error(`No errors found`);
+            return 0;
+          }
         });
