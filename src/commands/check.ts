@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 
 import {Constraints} from '../constraints';
-import {getWorkspace, PackageInfo} from '../workspace';
+import {getWorkspace} from '../workspace';
 
 const markPackageName = chalk.hex('#d7875f');
 const markPackageScope = chalk.hex('#d75f00');
@@ -40,57 +40,50 @@ export default (concierge: any) =>
           const constraints = new Constraints(cwd, workspaceInfo);
           const result = await constraints.process();
 
-          function getPackageInfo(workspaceLocation: string): PackageInfo {
-            return Object.values(workspaceInfo)
-                .find(packageInfo => packageInfo.location === workspaceLocation)!;
-          }
-
           let hasError = false;
 
-          for (const {workspaceLocation,
-                      dependencyIdent,
+          for (const {packageName,
+                      dependencyName,
                       dependencyRange,
                       dependencyType} of result.enforcedDependencyRanges) {
-            const workspaceName = getPackageInfo(workspaceLocation).packageName;
-            const deps = getPackageInfo(workspaceLocation)[dependencyType];
-            const descriptor = deps && deps[dependencyIdent];
+            const deps = workspaceInfo[packageName][dependencyType];
+            const descriptor = deps && deps[dependencyName];
 
             if (dependencyRange !== null) {
               if (!descriptor) {
                 hasError = true;
-                console.error(`${markPackageIdent(workspaceName)} must depend on ${
-                    markPackageIdent(dependencyIdent)} version ${
-                    markVersion(dependencyRange)} via ${dependencyType}, but doesn't`);
+                console.error(`${markPackageIdent(packageName)} must depend on ${
+                    markPackageIdent(dependencyName)} version ${markVersion(dependencyRange)} via ${
+                    dependencyType}, but doesn't`);
               } else {
                 if (descriptor !== dependencyRange) {
                   hasError = true;
-                  console.error(`${markPackageIdent(workspaceName)} must depend on ${
-                      markPackageIdent(dependencyIdent)} version ${
+                  console.error(`${markPackageIdent(packageName)} must depend on ${
+                      markPackageIdent(dependencyName)} version ${
                       markVersion(dependencyRange)}, but uses ${markVersion(descriptor)} instead`);
                 }
               }
             } else {
               if (descriptor) {
                 hasError = true;
-                console.error(`${markPackageIdent(workspaceName)} has an extraneous dependency on ${
-                    markPackageIdent(dependencyIdent)}`);
+                console.error(`${markPackageIdent(packageName)} has an extraneous dependency on ${
+                    markPackageIdent(dependencyName)}`);
               }
             }
           }
 
-          for (const {workspaceLocation,
-                      dependencyIdent,
+          for (const {packageName,
+                      dependencyName,
                       dependencyType,
                       reason} of result.invalidDependencies) {
-            const workspaceName = getPackageInfo(workspaceLocation).packageName;
-            const deps = getPackageInfo(workspaceLocation)[dependencyType];
-            const dependencyDescriptor = deps && deps[dependencyIdent];
+            const deps = workspaceInfo[packageName][dependencyType];
+            const dependencyDescriptor = deps && deps[dependencyName];
 
             if (dependencyDescriptor) {
               hasError = true;
-              console.error(`${markPackageIdent(workspaceName)} has an invalid dependency on ${
+              console.error(`${markPackageIdent(packageName)} has an invalid dependency on ${
                   markPackageIdent(
-                      dependencyIdent)} (invalid because ${markReason(String(reason))})`);
+                      dependencyName)} (invalid because ${markReason(String(reason))})`);
             }
           }
 

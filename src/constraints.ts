@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as path from 'path';
 import {map, toArray} from 'rxjs/operators';
 
 import {Engine} from './engine';
@@ -12,98 +13,130 @@ export const enum DependencyType {
 }
 
 export interface EnforcedDependencyRange {
-  workspaceLocation: string;
-  dependencyIdent: string;
+  packageName: string;
+  dependencyName: string;
   dependencyRange: string|null;
   dependencyType: DependencyType;
 }
 
 export interface InvalidDependency {
-  workspaceLocation: string;
-  dependencyIdent: string;
+  packageName: string;
+  dependencyName: string;
   dependencyType: DependencyType;
   reason: string|null;
 }
 
-export class Constraints {
-  public readonly source: string = ``;
+function exists(filepath: string): Promise<boolean> {
+  return new Promise(resolve => fs.exists(filepath, resolve));
+}
 
-  constructor(project: string, private readonly workspace: WorkspaceInfo) {
-    if (fs.existsSync(`${project}/constraints.pro`)) {
-      this.source = fs.readFileSync(`${project}/constraints.pro`, `utf8`);
+function readFile(filepath: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    fs.readFile(filepath, (err, contents) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(String(contents));
+      }
+    });
+  });
+}
+
+async function loadConstraints(directory: string) {
+  for (const filename of ['constraints.pl', 'constraints.pro']) {
+    let filepath = path.join(directory, filename);
+
+    if (await exists(filepath)) {
+      return readFile(filepath);
     }
   }
 
-  getProjectDatabase() {
-    let database = ``;
+  throw new Error(`Couldn't find constraints.pl or constraints.pro to load in ${directory}`);
+}
 
-    database += `dependencyType(${DependencyType.Dependencies}).\n`;
-    database += `dependencyType(${DependencyType.DevDependencies}).\n`;
-    database += `dependencyType(${DependencyType.PeerDependencies}).\n`;
+export class Constraints {
+  public readonly source: Promise<string>;
+
+  constructor(project: string, private readonly workspace: WorkspaceInfo) {
+    this.source = loadConstraints(project);
+  }
+
+  getProjectDatabase() {
+    const database: string[] = [];
+
+    function consult(tpl: TemplateStringsArray, ...values: any[]): void {
+      database.push(String.raw(tpl, ...values).trim());
+    }
+
+    consult`dependency_type(${DependencyType.Dependencies}).`;
+    consult`dependency_type(${DependencyType.DevDependencies}).`;
+    consult`dependency_type(${DependencyType.PeerDependencies}).`;
 
     for (const workspace of Object.values(this.workspace)) {
-      database += `workspace(${escape(workspace.location)}).\n`;
-      database +=
-          `workspace_ident(${escape(workspace.location)}, ${escape(workspace.packageName)}).\n`;
-      database +=
-          `workspace_version(${escape(workspace.location)}, ${escape(workspace.version)}).\n`;
+      consult`package(${escape(workspace.packageName)}).`;
+      consult`package_location(${escape(workspace.packageName)}, ${escape(workspace.location)}).`;
+      consult`package_version(${escape(workspace.packageName)}, ${escape(workspace.version)}).`;
 
       for (const type of
                [DependencyType.Dependencies,
                 DependencyType.PeerDependencies,
                 DependencyType.DevDependencies]) {
         for (const [dependency, dependencyVersion] of Object.entries(workspace[type] || {})) {
-          database += `workspace_has_dependency(${escape(workspace.location)}, ${
-              escape(dependency)}, ${escape(dependencyVersion)}, ${type}).\n`;
+          consult`package_has_dependency(${escape(workspace.packageName)}, ${escape(dependency)}, ${
+              escape(dependencyVersion)}, ${type}).`;
         }
       }
     }
 
-    return database;
+    return database.join('\n');
   }
 
-  getDeclarations() {
-    let declarations = ``;
+  getDeclarations(): string {
+    const declarations: string[] = [];
+
+    function consult(tpl: TemplateStringsArray, ...values: any[]): void {
+      declarations.push(String.raw(tpl, ...values).trim());
+    }
 
     // (Cwd, DependencyIdent, DependencyRange, DependencyType)
-    declarations += `gen_enforced_dependency_range(_, _, _, _) :- false.\n`;
+    consult`gen_enforced_dependency_range(_, _, _, _) :- false.`;
 
     // (Cwd, DependencyIdent, DependencyType, Reason)
-    declarations += `gen_invalid_dependency(_, _, _, _) :- false.\n`;
+    consult`gen_invalid_dependency(_, _, _, _) :- false.`;
 
-    return declarations;
+    return declarations.join('\n');
   }
 
-  get fullSource() {
-    return this.getProjectDatabase() + `\n` + this.source + `\n` + this.getDeclarations();
+  async getFullSource(): Promise<string> {
+    return this.getProjectDatabase() + `\n` + await this.source + `\n` + this.getDeclarations();
   }
 
   async process() {
     const engine = new Engine();
-    await engine.consult(this.fullSource);
+    engine.consult(await this.getFullSource());
 
     const enforcedDependencyRanges =
         await engine
             .query(
-                `workspace(WorkspaceLocation), dependencyType(DependencyType), gen_enforced_dependency_range(WorkspaceLocation, DependencyIdent, DependencyRange, DependencyType).`)
+                `package(PackageName), dependency_type(DependencyType), gen_enforced_dependency_range(PackageName, DependencyName, DependencyRange, DependencyType).`)
             .pipe(
                 map(answer => {
-                  const workspaceLocation = answer.WorkspaceLocation;
-                  const dependencyIdent = answer.DependencyIdent;
+                  const packageName = answer.PackageName;
+                  const dependencyName = answer.DependencyName;
                   const dependencyRange = answer.DependencyRange;
                   const dependencyType = answer.DependencyType;
 
-                  if (workspaceLocation === null || dependencyIdent === null) {
+                  if (packageName === null || dependencyName === null) {
                     throw new Error(`Invalid rule`);
                   }
 
-                  return {workspaceLocation, dependencyIdent, dependencyRange, dependencyType};
+                  return {packageName, dependencyName, dependencyRange, dependencyType};
                 }),
                 toArray<EnforcedDependencyRange>(),
                 sortMap([
                   ({dependencyRange}) => dependencyRange !== null ? `0` : `1`,
-                  ({workspaceLocation}) => workspaceLocation,
-                  ({dependencyIdent}) => dependencyIdent,
+                  ({packageName}) => packageName,
+                  ({dependencyName: dependencyIdent}) => dependencyIdent,
                 ]),
                 )
             .toPromise();
@@ -111,24 +144,24 @@ export class Constraints {
     const invalidDependencies =
         await engine
             .query(
-                `workspace(WorkspaceLocation), dependencyType(DependencyType), gen_invalid_dependency(WorkspaceLocation, DependencyIdent, DependencyType, Reason).`)
+                `package(PackageName), dependency_type(DependencyType), gen_invalid_dependency(PackageName, DependencyName, DependencyType, Reason).`)
             .pipe(
                 map(answer => {
-                  const workspaceLocation = answer.WorkspaceLocation;
-                  const dependencyIdent = answer.DependencyIdent;
+                  const packageName = answer.PackageName;
+                  const dependencyName = answer.DependencyName;
                   const dependencyType = answer.DependencyType;
                   const reason = answer.links.Reason;
 
-                  if (workspaceLocation === null || dependencyIdent === null) {
+                  if (packageName === null || dependencyName === null) {
                     throw new Error(`Invalid rule`);
                   }
 
-                  return {workspaceLocation, dependencyIdent, dependencyType, reason};
+                  return {packageName, dependencyName, dependencyType, reason};
                 }),
                 toArray<InvalidDependency>(),
                 sortMap([
-                  ({workspaceLocation}) => workspaceLocation,
-                  ({dependencyIdent}) => dependencyIdent,
+                  ({packageName}) => packageName,
+                  ({dependencyName: dependencyIdent}) => dependencyIdent,
                 ]),
                 )
             .toPromise();
