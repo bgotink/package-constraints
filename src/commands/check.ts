@@ -3,8 +3,8 @@ import chalk from 'chalk';
 import {Constraints} from '../constraints';
 import {getWorkspace} from '../workspace';
 
-const markPackageName = chalk.hex('#d7875f');
-const markPackageScope = chalk.hex('#d75f00');
+const markPackageName = chalk.hex('#ee7105');
+const markPackageScope = chalk.hex('#ffa726');
 function markPackageIdent(packageIdent: string): string {
   const scopeMatch = packageIdent.match(/^(@[^/]+)\/(.*)$/);
   if (scopeMatch != null) {
@@ -13,7 +13,8 @@ function markPackageIdent(packageIdent: string): string {
     return markPackageName(packageIdent);
   }
 }
-const markVersion = chalk.bold.hex('#00afaf');
+const markVersion = chalk.bold.hex('#009985');
+const markType = chalk.hex('#009985');
 const markReason = chalk.bold;
 const markError = chalk.bold.hex('#d64040');
 
@@ -53,7 +54,7 @@ export default (concierge: any) =>
                     errorCount++;
                     console.error(`${markPackageIdent(packageName)} must depend on ${
                         markPackageIdent(dependencyName)} version ${
-                        markVersion(dependencyRange)} via ${dependencyType}, but doesn't`);
+                        markVersion(dependencyRange)} via ${markType(dependencyType)}, but doesn't`);
                   } else {
                     if (descriptor !== dependencyRange) {
                       errorCount++;
