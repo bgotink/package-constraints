@@ -1,3 +1,6 @@
+import {createWriteStream} from 'fs-extra';
+import {Writable} from 'stream';
+
 import {Constraints, EnforcedDependencyRange, InvalidDependency} from '../constraints';
 import {StdioFormatter} from '../formatters/stdio';
 import {createSort, groupByPackage} from '../util';
@@ -13,11 +16,15 @@ const sortInvalidDependencies = createSort<InvalidDependency>(
 
 interface Options {
   withExitCode: boolean;
+
+  outputFile?: string;
+
+  stderr: Writable;
 }
 
 export default (concierge: any) =>
     concierge
-        .command(`check [--without-exit-code]`)
+        .command(`check [--without-exit-code] [-o,--output-file FILE]`)
 
         .describe(`check that the constraints are met`)
 
@@ -40,7 +47,9 @@ export default (concierge: any) =>
           const processor = await constraints.process();
 
           let hasError = false;
-          const formatter = new StdioFormatter();
+          const formatter = new StdioFormatter(
+              options.outputFile ? createWriteStream(options.outputFile, {mode: 0o666}) :
+                                   options.stderr);
 
           await processor.enforcedDependencyRanges.pipe(groupByPackage())
               .forEach(enforcedDependencyRanges => {

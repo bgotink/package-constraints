@@ -1,30 +1,52 @@
-import chalk from 'chalk';
+import chalk, {Chalk} from 'chalk';
+import {Writable} from 'stream';
+import {WriteStream} from 'tty';
 
 import {DependencyType} from '../constraints';
 
 import {Formatter} from './formatter';
 
-const _markPackageName = chalk.hex('#ee7105');
-const _markPackageScope = chalk.hex('#ffa726');
-function markPackageName(packageIdent: string): string {
-  const scopeMatch = packageIdent.match(/^(@[^/]+)\/(.*)$/);
-  if (scopeMatch != null) {
-    return _markPackageScope(`${scopeMatch[1]}/`) + _markPackageName(scopeMatch[2]);
-  } else {
-    return _markPackageName(packageIdent);
+class Prettier {
+  private readonly _packageName: Chalk;
+  private readonly _packageScope: Chalk;
+
+  public readonly version: Chalk;
+  public readonly type: Chalk;
+  public readonly reason: Chalk;
+  public readonly error: Chalk;
+
+  public constructor(chalk: Chalk) {
+    this._packageName = chalk.hex('#ee7105');
+    this._packageScope = chalk.hex('#ffa726');
+    this.version = chalk.bold.hex('#009985');
+    this.type = chalk.hex('#009985');
+    this.reason = chalk.bold;
+    this.error = chalk.bold.hex('#d64040')
+  }
+
+  public packageName(packageIdent: string): string {
+    const scopeMatch = packageIdent.match(/^(@[^/]+)\/(.*)$/);
+    if (scopeMatch != null) {
+      return this._packageScope(`${scopeMatch[1]}/`) + this._packageName(scopeMatch[2]);
+    } else {
+      return this._packageName(packageIdent);
+    }
   }
 }
-const markVersion = chalk.bold.hex('#009985');
-const markType = chalk.hex('#009985');
-const markReason = chalk.bold;
-const markError = chalk.bold.hex('#d64040');
 
 export class StdioFormatter implements Formatter {
   private _errorCount = 0;
 
+  private _prettier: Prettier;
+
+  public constructor(private readonly _sink: Writable) {
+    this._prettier = new Prettier(
+        (_sink as WriteStream).isTTY ? chalk : new chalk.constructor({enabled: false}));
+  }
+
   private _logError(strings: TemplateStringsArray, ...values: string[]): void {
     this._errorCount++;
-    console.error(String.raw(strings, ...values));
+    this._sink.write(String.raw(strings, ...values) + '\n');
   }
 
   public markInvalidDependencyVersion(
@@ -33,9 +55,11 @@ export class StdioFormatter implements Formatter {
       dependencyName: string,
       requiredVersion: string,
       actualVersion: string): void {
-    this._logError`${markPackageName(packageName)} must depend on ${
-        markPackageName(dependencyName)} version ${markVersion(requiredVersion)} via ${
-        markType(dependencyType)}, but depends on version ${markVersion(actualVersion)} instead`;
+    this._logError`${this._prettier.packageName(packageName)} must depend on ${
+        this._prettier.packageName(
+            dependencyName)} version ${this._prettier.version(requiredVersion)} via ${
+        this._prettier.type(dependencyType)}, but depends on version ${
+        this._prettier.version(actualVersion)} instead`;
   }
 
   public markMissingDependency(
@@ -43,9 +67,10 @@ export class StdioFormatter implements Formatter {
       dependencyType: DependencyType,
       dependencyName: string,
       requiredVersion: string): void {
-    this._logError`${markPackageName(packageName)} must depend on ${
-        markPackageName(dependencyName)} version ${markVersion(requiredVersion)} via ${
-        markType(dependencyType)}, but doesn't`;
+    this._logError`${this._prettier.packageName(packageName)} must depend on ${
+        this._prettier.packageName(
+            dependencyName)} version ${this._prettier.version(requiredVersion)} via ${
+        this._prettier.type(dependencyType)}, but doesn't`;
   }
 
   public markExtraneousDependency(
@@ -53,24 +78,25 @@ export class StdioFormatter implements Formatter {
       dependencyType: DependencyType,
       dependencyName: string,
       actualVersion: string): void {
-    this._logError`${markPackageName(packageName)} has an extraneous dependency on ${
-        markPackageName(
-            dependencyName)} version ${markVersion(actualVersion)} via ${markType(dependencyType)}`;
+    this._logError`${this._prettier.packageName(packageName)} has an extraneous dependency on ${
+        this._prettier.packageName(dependencyName)} version ${
+        this._prettier.version(actualVersion)} via ${this._prettier.type(dependencyType)}`;
   }
 
   public markInvalidDependency(
       packageName: string, dependencyType: DependencyType, dependencyName: string, reason: string):
       void {
-    this._logError`${markPackageName(packageName)} has an invalid dependency on ${
-        markPackageName(dependencyName)} via ${markType(dependencyType)} (invalid because ${
-        markReason(String(reason))})`;
+    this._logError`${this._prettier.packageName(packageName)} has an invalid dependency on ${
+        this._prettier.packageName(
+            dependencyName)} via ${this._prettier.type(dependencyType)} (invalid because ${
+        this._prettier.reason(String(reason))})`;
   }
 
   public complete(): void {
     if (this._errorCount > 0) {
-      console.error(`Found ${markError(`${this._errorCount} errors`)}`);
+      this._sink.write(`Found ${this._prettier.error(`${this._errorCount} errors`)}\n`);
     } else {
-      console.error(`No errors found`);
+      this._sink.write(`No errors found\n`);
     }
   }
 }
