@@ -5,14 +5,14 @@ import {Constraints} from '../constraints';
 import {createSort, groupByPackage} from '../util';
 import {getWorkspace} from '../workspace';
 
-const markPackageName = chalk.hex('#ee7105');
-const markPackageScope = chalk.hex('#ffa726');
-function markPackageIdent(packageIdent: string): string {
+const _markPackageName = chalk.hex('#ee7105');
+const _markPackageScope = chalk.hex('#ffa726');
+function markPackageName(packageIdent: string): string {
   const scopeMatch = packageIdent.match(/^(@[^/]+)\/(.*)$/);
   if (scopeMatch != null) {
-    return markPackageScope(`${scopeMatch[1]}/`) + markPackageName(scopeMatch[2]);
+    return _markPackageScope(`${scopeMatch[1]}/`) + _markPackageName(scopeMatch[2]);
   } else {
-    return markPackageName(packageIdent);
+    return _markPackageName(packageIdent);
   }
 }
 const markVersion = chalk.bold.hex('#009985');
@@ -54,38 +54,43 @@ export default (concierge: any) =>
 
           let errorCount = 0;
 
+          function logError(strings: TemplateStringsArray, ...values: string[]): void {
+            errorCount++;
+            console.error(String.raw(strings, ...values));
+          }
+
           await processor.enforcedDependencyRanges.pipe(groupByPackage())
               .forEach(enforcedDependencyRanges => {
                 const {packageName} = enforcedDependencyRanges[0];
                 const packageInfo = workspaceInfo[packageName];
 
-                for (const {dependencyName, dependencyRange, dependencyType} of
-                         sortEnforcedDependencyRanges(enforcedDependencyRanges)) {
+                for (const {
+                       dependencyName,
+                       dependencyRange: enforcedDependencyRange,
+                       dependencyType
+                     } of sortEnforcedDependencyRanges(enforcedDependencyRanges)) {
                   const deps = packageInfo[dependencyType];
-                  const descriptor = deps && deps[dependencyName];
+                  const actualDependencyRange = deps && deps[dependencyName];
 
-                  if (dependencyRange !== null) {
-                    if (!descriptor) {
-                      errorCount++;
-                      console.error(`${markPackageIdent(packageName)} must depend on ${
-                          markPackageIdent(
-                              dependencyName)} version ${markVersion(dependencyRange)} via ${
-                          markType(dependencyType)}, but doesn't`);
-                    } else {
-                      if (descriptor !== dependencyRange) {
-                        errorCount++;
-                        console.error(`${markPackageIdent(packageName)} must depend on ${
-                            markPackageIdent(dependencyName)} version ${
-                            markVersion(
-                                dependencyRange)}, but uses ${markVersion(descriptor)} instead`);
+                  if (enforcedDependencyRange !== null) {
+                    if (actualDependencyRange !== enforcedDependencyRange) {
+                      if (actualDependencyRange != null) {
+                        logError`${markPackageName(packageName)} must depend on ${
+                            markPackageName(dependencyName)} version ${
+                            markVersion(enforcedDependencyRange)} via ${
+                            markType(dependencyType)}, but depends on version ${
+                            markVersion(actualDependencyRange)} instead`;
+                      } else {
+                        logError`${markPackageName(packageName)} must depend on ${
+                            markPackageName(dependencyName)} version ${
+                            markVersion(enforcedDependencyRange)} via ${
+                            markType(dependencyType)}, but doesn't`;
                       }
                     }
                   } else {
-                    if (descriptor) {
-                      errorCount++;
-                      console.error(
-                          `${markPackageIdent(packageName)} has an extraneous dependency on ${
-                              markPackageIdent(dependencyName)}`);
+                    if (actualDependencyRange != null) {
+                      logError`${markPackageName(packageName)} has an extraneous dependency on ${
+                          markPackageName(dependencyName)} via ${markType(dependencyType)}`;
                     }
                   }
                 }
@@ -102,10 +107,9 @@ export default (concierge: any) =>
                   const dependencyDescriptor = deps && deps[dependencyName];
 
                   if (dependencyDescriptor) {
-                    errorCount++;
-                    console.error(`${markPackageIdent(packageName)} has an invalid dependency on ${
-                        markPackageIdent(
-                            dependencyName)} (invalid because ${markReason(String(reason))})`);
+                    logError`${markPackageName(packageName)} has an invalid dependency on ${
+                        markPackageName(dependencyName)} via ${
+                        markType(dependencyType)} (invalid because ${markReason(String(reason))})`;
                   }
                 }
               });
