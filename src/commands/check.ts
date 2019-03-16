@@ -1,23 +1,7 @@
-import chalk from 'chalk';
-
 import {Constraints, EnforcedDependencyRange, InvalidDependency} from '../constraints';
+import {StdioFormatter} from '../formatters/stdio';
 import {createSort, groupByPackage} from '../util';
 import {getWorkspace} from '../workspace';
-
-const _markPackageName = chalk.hex('#ee7105');
-const _markPackageScope = chalk.hex('#ffa726');
-function markPackageName(packageIdent: string): string {
-  const scopeMatch = packageIdent.match(/^(@[^/]+)\/(.*)$/);
-  if (scopeMatch != null) {
-    return _markPackageScope(`${scopeMatch[1]}/`) + _markPackageName(scopeMatch[2]);
-  } else {
-    return _markPackageName(packageIdent);
-  }
-}
-const markVersion = chalk.bold.hex('#009985');
-const markType = chalk.hex('#009985');
-const markReason = chalk.bold;
-const markError = chalk.bold.hex('#d64040');
 
 const sortEnforcedDependencyRanges = createSort<EnforcedDependencyRange>(
     ({dependencyRange}) => dependencyRange != null ? 0 : 1,
@@ -51,12 +35,8 @@ export default (concierge: any) =>
           const constraints = new Constraints(cwd, workspaceInfo);
           const processor = await constraints.process();
 
-          let errorCount = 0;
-
-          function logError(strings: TemplateStringsArray, ...values: string[]): void {
-            errorCount++;
-            console.error(String.raw(strings, ...values));
-          }
+          let hasError = false;
+          const formatter = new StdioFormatter();
 
           await processor.enforcedDependencyRanges.pipe(groupByPackage())
               .forEach(enforcedDependencyRanges => {
@@ -74,22 +54,24 @@ export default (concierge: any) =>
                   if (enforcedDependencyRange !== null) {
                     if (actualDependencyRange !== enforcedDependencyRange) {
                       if (actualDependencyRange != null) {
-                        logError`${markPackageName(packageName)} must depend on ${
-                            markPackageName(dependencyName)} version ${
-                            markVersion(enforcedDependencyRange)} via ${
-                            markType(dependencyType)}, but depends on version ${
-                            markVersion(actualDependencyRange)} instead`;
+                        hasError = true;
+                        formatter.markInvalidDependencyVersion(
+                            packageName,
+                            dependencyType,
+                            dependencyName,
+                            enforcedDependencyRange,
+                            actualDependencyRange);
                       } else {
-                        logError`${markPackageName(packageName)} must depend on ${
-                            markPackageName(dependencyName)} version ${
-                            markVersion(enforcedDependencyRange)} via ${
-                            markType(dependencyType)}, but doesn't`;
+                        hasError = true;
+                        formatter.markMissingDependency(
+                            packageName, dependencyType, dependencyName, enforcedDependencyRange);
                       }
                     }
                   } else {
                     if (actualDependencyRange != null) {
-                      logError`${markPackageName(packageName)} has an extraneous dependency on ${
-                          markPackageName(dependencyName)} via ${markType(dependencyType)}`;
+                      hasError = true;
+                      formatter.markExtraneousDependency(
+                          packageName, dependencyType, dependencyName, actualDependencyRange);
                     }
                   }
                 }
@@ -106,18 +88,16 @@ export default (concierge: any) =>
                   const dependencyDescriptor = deps && deps[dependencyName];
 
                   if (dependencyDescriptor) {
-                    logError`${markPackageName(packageName)} has an invalid dependency on ${
-                        markPackageName(dependencyName)} via ${
-                        markType(dependencyType)} (invalid because ${markReason(String(reason))})`;
+                    hasError = true;
+                    formatter.markInvalidDependency(
+                        packageName, dependencyType, dependencyName, String(reason));
                   }
                 }
               });
 
-          if (errorCount > 0) {
-            console.error(`Found ${markError(`${errorCount} errors`)}`);
+          if (hasError) {
             return 1;
           } else {
-            console.error(`No errors found`);
             return 0;
           }
         });
