@@ -17,6 +17,8 @@ const sortInvalidDependencies = createSort<InvalidDependency>(
 );
 
 interface Options {
+  cwd?: string;
+
   withExitCode: boolean;
 
   outputFile?: string;
@@ -40,7 +42,7 @@ function createFormatter(options: Options): Formatter {
 
 export default (concierge: any) =>
     concierge
-        .command(`check [--without-exit-code] [--quiet] [-o,--output-file FILE]`)
+        .command(`check [--cwd CWD] [--without-exit-code] [--quiet] [-o,--output-file FILE]`)
 
         .describe(`check that the constraints are met`)
 
@@ -56,7 +58,7 @@ export default (concierge: any) =>
             )
 
         .action(async (options: Options) => {
-          const cwd = process.cwd();
+          const cwd = options.cwd || process.cwd();
 
           const workspaceInfo = await getWorkspace(cwd).toPromise();
           const constraints = new Constraints(cwd, workspaceInfo);
