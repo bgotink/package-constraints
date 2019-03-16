@@ -11,9 +11,13 @@ const sortInvalidDependencies = createSort<InvalidDependency>(
     ({dependencyName}) => dependencyName,
 );
 
+interface Options {
+  withExitCode: boolean;
+}
+
 export default (concierge: any) =>
     concierge
-        .command(`check`)
+        .command(`check [--without-exit-code]`)
 
         .describe(`check that the constraints are met`)
 
@@ -28,7 +32,7 @@ export default (concierge: any) =>
             `yarn constraints check`,
             )
 
-        .action(async () => {
+        .action(async (options: Options) => {
           const cwd = process.cwd();
 
           const workspaceInfo = await getWorkspace(cwd).toPromise();
@@ -95,7 +99,7 @@ export default (concierge: any) =>
                 }
               });
 
-          if (hasError) {
+          if (options.withExitCode && hasError) {
             return 1;
           } else {
             return 0;
