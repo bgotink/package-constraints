@@ -2,6 +2,8 @@ import {createWriteStream} from 'fs-extra';
 import {Writable} from 'stream';
 
 import {Constraints, EnforcedDependencyRange, InvalidDependency} from '../constraints';
+import {CombineFormatter} from '../formatters/combine';
+import {Formatter} from '../formatters/formatter';
 import {StdioFormatter} from '../formatters/stdio';
 import {createSort, groupByPackage} from '../util';
 import {getWorkspace} from '../workspace';
@@ -19,12 +21,26 @@ interface Options {
 
   outputFile?: string;
 
+  quiet: boolean;
+
   stderr: Writable;
+}
+
+function createFormatter(options: Options): Formatter {
+  const formatters: Formatter[] = [];
+
+  if (options.outputFile != null) {
+    formatters.push(new StdioFormatter(createWriteStream(options.outputFile)));
+  } else if (!options.quiet) {
+    formatters.push(new StdioFormatter(options.stderr));
+  }
+
+  return new CombineFormatter(formatters);
 }
 
 export default (concierge: any) =>
     concierge
-        .command(`check [--without-exit-code] [-o,--output-file FILE]`)
+        .command(`check [--without-exit-code] [--quiet] [-o,--output-file FILE]`)
 
         .describe(`check that the constraints are met`)
 
@@ -47,9 +63,7 @@ export default (concierge: any) =>
           const processor = await constraints.process();
 
           let hasError = false;
-          const formatter = new StdioFormatter(
-              options.outputFile ? createWriteStream(options.outputFile, {mode: 0o666}) :
-                                   options.stderr);
+          const formatter = createFormatter(options);
 
           await processor.enforcedDependencyRanges.pipe(groupByPackage())
               .forEach(enforcedDependencyRanges => {
