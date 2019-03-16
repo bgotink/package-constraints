@@ -5,6 +5,7 @@ import {Constraints, EnforcedDependencyRange, InvalidDependency} from '../constr
 import {CombineFormatter} from '../formatters/combine';
 import {Formatter} from '../formatters/formatter';
 import {StdioFormatter} from '../formatters/stdio';
+import {TapFormatter} from '../formatters/tap';
 import {createSort, groupByPackage} from '../util';
 import {getWorkspace} from '../workspace';
 
@@ -21,20 +22,53 @@ interface Options {
 
   withExitCode: boolean;
 
-  outputFile?: string;
+  outputFile?: string[];
 
   quiet: boolean;
 
+  stdout: Writable;
+
+  format?: string;
+
   stderr: Writable;
+}
+
+function createFormatterForFormat(
+    format: string|null|undefined, pipeableOutfile: () => Writable, outfile: () => Writable):
+    Formatter {
+  switch (format) {
+    case 'tap':
+      return new TapFormatter(pipeableOutfile());
+    case undefined:
+    case null:
+      return new StdioFormatter(outfile());
+    default:
+      throw new Error(`Invalid format "${format}"`);
+  }
 }
 
 function createFormatter(options: Options): Formatter {
   const formatters: Formatter[] = [];
 
+  if (!options.quiet) {
+    formatters.push(
+        createFormatterForFormat(options.format, () => options.stdout, () => options.stderr));
+  }
+
   if (options.outputFile != null) {
-    formatters.push(new StdioFormatter(createWriteStream(options.outputFile)));
-  } else if (!options.quiet) {
-    formatters.push(new StdioFormatter(options.stderr));
+    for (const outFile of options.outputFile) {
+      let format: string|null = null;
+      let filename = outFile;
+
+      const match = outFile.match(/^([^:]+):(.*)$/);
+      if (match) {
+        ([, format, filename] = match);
+      }
+
+      const createOutput = () => createWriteStream(filename);
+
+      formatters.push(createFormatterForFormat(format, createOutput, createOutput));
+    }
   }
 
   return new CombineFormatter(formatters);
@@ -42,7 +76,8 @@ function createFormatter(options: Options): Formatter {
 
 export default (concierge: any) =>
     concierge
-        .command(`check [--cwd CWD] [--without-exit-code] [--quiet] [-o,--output-file FILE]`)
+        .command(
+            `check [--cwd CWD] [--without-exit-code] [--quiet] [--format FORMAT] [-o,--output-file FILE...]`)
 
         .describe(`check that the constraints are met`)
 
@@ -52,10 +87,10 @@ export default (concierge: any) =>
   For more information as to how to write constraints, please consult our manual: TODO.
 `)
 
+        .example(`Check all constraints and log errors to stderr`, `yarn constraints check`)
         .example(
-            `Checks that all constraints are satisfied`,
-            `yarn constraints check`,
-            )
+            `Check all constraints and output as TAP, then transform that to JUnit results xml`,
+            `yarn constraints check --format tap | npx tap-junit`)
 
         .action(async (options: Options) => {
           const cwd = options.cwd || process.cwd();
