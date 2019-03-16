@@ -1,6 +1,8 @@
 import chalk from 'chalk';
 
+import {EnforcedDependencyRange, InvalidDependency} from '../constraint-processor';
 import {Constraints} from '../constraints';
+import {createSort, groupByPackage} from '../util';
 import {getWorkspace} from '../workspace';
 
 const markPackageName = chalk.hex('#ee7105');
@@ -17,6 +19,14 @@ const markVersion = chalk.bold.hex('#009985');
 const markType = chalk.hex('#009985');
 const markReason = chalk.bold;
 const markError = chalk.bold.hex('#d64040');
+
+const sortEnforcedDependencyRanges = createSort<EnforcedDependencyRange>(
+    ({dependencyRange}) => dependencyRange != null ? 0 : 1,
+    ({dependencyName}) => dependencyName,
+);
+const sortInvalidDependencies = createSort<InvalidDependency>(
+    ({dependencyName}) => dependencyName,
+);
 
 export default (concierge: any) =>
     concierge
@@ -44,46 +54,59 @@ export default (concierge: any) =>
 
           let errorCount = 0;
 
-          await processor.enforcedDependencyRanges.forEach(
-              ({packageName, dependencyName, dependencyRange, dependencyType}) => {
-                const deps = workspaceInfo[packageName][dependencyType];
-                const descriptor = deps && deps[dependencyName];
+          await processor.enforcedDependencyRanges.pipe(groupByPackage())
+              .forEach(enforcedDependencyRanges => {
+                const {packageName} = enforcedDependencyRanges[0];
+                const packageInfo = workspaceInfo[packageName];
 
-                if (dependencyRange !== null) {
-                  if (!descriptor) {
-                    errorCount++;
-                    console.error(`${markPackageIdent(packageName)} must depend on ${
-                        markPackageIdent(dependencyName)} version ${
-                        markVersion(dependencyRange)} via ${markType(dependencyType)}, but doesn't`);
-                  } else {
-                    if (descriptor !== dependencyRange) {
+                for (const {dependencyName, dependencyRange, dependencyType} of
+                         sortEnforcedDependencyRanges(enforcedDependencyRanges)) {
+                  const deps = packageInfo[dependencyType];
+                  const descriptor = deps && deps[dependencyName];
+
+                  if (dependencyRange !== null) {
+                    if (!descriptor) {
                       errorCount++;
                       console.error(`${markPackageIdent(packageName)} must depend on ${
                           markPackageIdent(
-                              dependencyName)} version ${markVersion(dependencyRange)}, but uses ${
-                          markVersion(descriptor)} instead`);
+                              dependencyName)} version ${markVersion(dependencyRange)} via ${
+                          markType(dependencyType)}, but doesn't`);
+                    } else {
+                      if (descriptor !== dependencyRange) {
+                        errorCount++;
+                        console.error(`${markPackageIdent(packageName)} must depend on ${
+                            markPackageIdent(dependencyName)} version ${
+                            markVersion(
+                                dependencyRange)}, but uses ${markVersion(descriptor)} instead`);
+                      }
                     }
-                  }
-                } else {
-                  if (descriptor) {
-                    errorCount++;
-                    console.error(
-                        `${markPackageIdent(packageName)} has an extraneous dependency on ${
-                            markPackageIdent(dependencyName)}`);
+                  } else {
+                    if (descriptor) {
+                      errorCount++;
+                      console.error(
+                          `${markPackageIdent(packageName)} has an extraneous dependency on ${
+                              markPackageIdent(dependencyName)}`);
+                    }
                   }
                 }
               });
 
-          await processor.invalidDependencies.forEach(
-              ({packageName, dependencyName, dependencyType, reason}) => {
-                const deps = workspaceInfo[packageName][dependencyType];
-                const dependencyDescriptor = deps && deps[dependencyName];
+          await processor.invalidDependencies.pipe(groupByPackage())
+              .forEach(invalidDependencies => {
+                const {packageName} = invalidDependencies[0];
+                const packageInfo = workspaceInfo[packageName];
 
-                if (dependencyDescriptor) {
-                  errorCount++;
-                  console.error(`${markPackageIdent(packageName)} has an invalid dependency on ${
-                      markPackageIdent(
-                          dependencyName)} (invalid because ${markReason(String(reason))})`);
+                for (const {dependencyName, dependencyType, reason} of sortInvalidDependencies(
+                         invalidDependencies)) {
+                  const deps = packageInfo[dependencyType];
+                  const dependencyDescriptor = deps && deps[dependencyName];
+
+                  if (dependencyDescriptor) {
+                    errorCount++;
+                    console.error(`${markPackageIdent(packageName)} has an invalid dependency on ${
+                        markPackageIdent(
+                            dependencyName)} (invalid because ${markReason(String(reason))})`);
+                  }
                 }
               });
 
