@@ -1,7 +1,6 @@
 import chalk from 'chalk';
 
-import {EnforcedDependencyRange, InvalidDependency} from '../constraint-processor';
-import {Constraints} from '../constraints';
+import {Constraints, EnforcedDependencyRange, InvalidDependency} from '../constraints';
 import {createSort, groupByPackage} from '../util';
 import {getWorkspace} from '../workspace';
 

@@ -1,9 +1,10 @@
 import * as path from 'path';
 
+import {readFile} from '../util';
+import {PackageInfo, WorkspaceInfo} from '../workspace';
+
 import {DependencyType} from './constants';
 import {ConstraintProcessor} from './constraint-processor';
-import {readFile} from './util';
-import {PackageInfo, WorkspaceInfo} from './workspace';
 
 async function loadConstraints(directory: string) {
   for (const filename of ['constraints.pl', 'constraints.pro']) {

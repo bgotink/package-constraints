@@ -1,9 +1,9 @@
 import chalk from 'chalk';
+import * as fs from 'fs';
+import * as path from 'path';
 
 import {Constraints} from '../constraints';
 import {getWorkspace} from '../workspace';
-import * as fs from 'fs';
-import * as path from 'path';
 
 function writeFile(filepath: string, content: string) {
   return new Promise<void>((resolve, reject) => {
