@@ -124,6 +124,7 @@ export default (concierge: any) =>
                 }
               });
 
+          formatter.complete();
           if (options.withExitCode && hasError) {
             return 1;
           } else {
