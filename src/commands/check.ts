@@ -95,12 +95,18 @@ export default (concierge: any) =>
                         formatter.markMissingDependency(
                             packageName, dependencyType, dependencyName, enforcedDependencyRange);
                       }
+                    } else {
+                      formatter.markValidDependency(
+                          packageName, dependencyType, dependencyName, enforcedDependencyRange);
                     }
                   } else {
                     if (actualDependencyRange != null) {
                       hasError = true;
                       formatter.markExtraneousDependency(
                           packageName, dependencyType, dependencyName, actualDependencyRange);
+                    } else {
+                      formatter.markValidDependency(
+                          packageName, dependencyType, dependencyName, null);
                     }
                   }
                 }

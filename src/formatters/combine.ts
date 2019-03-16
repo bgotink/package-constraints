@@ -46,6 +46,16 @@ export class CombineFormatter implements Formatter {
     }
   }
 
+  public markValidDependency(
+      packageName: string,
+      dependencyType: DependencyType,
+      dependencyName: string,
+      version: string|null): void {
+    for (const formatter of this._formatters) {
+      formatter.markValidDependency(packageName, dependencyType, dependencyName, version);
+    }
+  }
+
   public complete(): void {
     for (const formatter of this._formatters) {
       formatter.complete();

@@ -24,5 +24,11 @@ export interface Formatter {
       packageName: string, dependencyType: DependencyType, dependencyName: string, reason: string):
       void;
 
+  markValidDependency(
+      packageName: string,
+      dependencyType: DependencyType,
+      dependencyName: string,
+      version: string|null): void;
+
   complete(): void;
 }

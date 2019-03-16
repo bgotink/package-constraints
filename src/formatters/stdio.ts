@@ -92,6 +92,10 @@ export class StdioFormatter implements Formatter {
         this._prettier.reason(String(reason))})`;
   }
 
+  public markValidDependency(): void {
+    // Logging this would introduce too much logging
+  }
+
   public complete(): void {
     if (this._errorCount > 0) {
       this._sink.write(`Found ${this._prettier.error(`${this._errorCount} errors`)}\n`);
