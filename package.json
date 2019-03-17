@@ -19,8 +19,7 @@
     "fs-extra": "^7.0.1",
     "json5": "^2.1.0",
     "rxjs": "^6.4.0",
-    "tau-prolog": "^0.2.49",
-    "tslib": "^1.9.3"
+    "tau-prolog": "^0.2.49"
   },
   "devDependencies": {
     "@types/execa": "^0.9.0",

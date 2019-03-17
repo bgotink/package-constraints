@@ -411,7 +411,7 @@ tau-prolog@^0.2.49:
   resolved "https://registry.yarnpkg.com/tau-prolog/-/tau-prolog-0.2.49.tgz#5f520bafdac4beefea7e9966084a0267eb8cafcf"
   integrity sha512-EvaHi1nx4PYAa+G/oUiRGML+XGssb5aNgKGLkFrjpoqYW6q10C5d3PJ4Xb+Na8rsVn9weMstjJhRpmzX2DnUMQ==
 
-tslib@^1.9.0, tslib@^1.9.3:
+tslib@^1.9.0:
   version "1.9.3"
   resolved "https://registry.yarnpkg.com/tslib/-/tslib-1.9.3.tgz#d7e4dd79245d85428c4d7e4822a79917954ca286"
   integrity sha512-4krF8scpejhaOgqzBEcGM7yDIEfi0/8+8zDRZhNZZ2kjmHJ4hv3zCbQWxoJGz1iw5U0Jl0nma13xzHXcncMavQ==
