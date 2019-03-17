@@ -105,7 +105,7 @@ export default (concierge: any) =>
           await processor.enforcedDependencyRanges.pipe(groupByPackage())
               .forEach(enforcedDependencyRanges => {
                 const {packageName} = enforcedDependencyRanges[0];
-                const packageInfo = workspaceInfo[packageName];
+                const packageInfo = workspaceInfo.packages.get(packageName)!;
 
                 for (const {
                        dependencyName,
@@ -150,7 +150,7 @@ export default (concierge: any) =>
           await processor.invalidDependencies.pipe(groupByPackage())
               .forEach(invalidDependencies => {
                 const {packageName} = invalidDependencies[0];
-                const packageInfo = workspaceInfo[packageName];
+                const packageInfo = workspaceInfo.packages.get(packageName)!;
 
                 for (const {dependencyName, dependencyType, reason} of sortInvalidDependencies(
                          invalidDependencies)) {

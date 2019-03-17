@@ -50,7 +50,7 @@ export class Constraints {
     consult`dependency_type(${DependencyType.DevDependencies}).`;
     consult`dependency_type(${DependencyType.PeerDependencies}).`;
 
-    for (const workspace of Object.values(this.workspace).sort(sortByName)) {
+    for (const workspace of Array.from(this.workspace.packages.values()).sort(sortByName)) {
       consult`package(${escape(workspace.packageName)}).`;
       consult`package_location(${escape(workspace.packageName)}, ${escape(workspace.location)}).`;
       consult`package_version(${escape(workspace.packageName)}, ${escape(workspace.version)}).`;
@@ -65,6 +65,8 @@ export class Constraints {
         }
       }
     }
+
+    consult`root_package(${escape(this.workspace.rootPackageName)}).`;
 
     return database.join('\n');
   }
