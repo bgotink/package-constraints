@@ -77,7 +77,7 @@ function createFormatter(options: Options): Formatter {
 export default (concierge: any) =>
     concierge
         .command(
-            `check [--cwd CWD] [--without-exit-code] [--quiet] [--format FORMAT] [-o,--output-file FILE...]`)
+            `check [--cwd CWD] [--without-exit-code] [-q,--quiet] [-f,--format FORMAT] [-o,--output-file FILE...]`)
 
         .describe(`check that the constraints are met`)
 
