@@ -1,15 +1,9 @@
 import chalk from 'chalk';
-import * as fs from 'fs';
 import * as path from 'path';
 
 import {Constraints} from '../constraints';
+import {writeFile} from '../util';
 import {getWorkspace} from '../workspace';
-
-function writeFile(filepath: string, content: string) {
-  return new Promise<void>((resolve, reject) => {
-    fs.writeFile(filepath, content, err => err ? reject(err) : resolve());
-  });
-}
 
 export default (concierge: any) =>
     concierge
