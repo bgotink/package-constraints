@@ -24,6 +24,7 @@ export interface PackageInfo {
 
   version: string;
 
+  private: boolean;
   location: string;
 
   workspaceDependencies: string[];
@@ -49,6 +50,7 @@ export interface Dependencies {
 interface PackageJson {
   name: string;
   version: string;
+  private?: boolean;
 
   dependencies?: Dependencies;
   devDependencies?: Dependencies;
@@ -102,28 +104,28 @@ async function getWorkspaceRoot(cwd: string) {
 export function getWorkspace(cwd: string): Observable<WorkspaceInfo> {
   return from(getWorkspaceRoot(cwd)).pipe(flatMap(({workspaceRoot, isWorkspace}) => {
     const workspaceInfo =
-        from(readJson(path.resolve(workspaceRoot, 'package.json')))
-            .pipe(map(({name, version, dependencies, devDependencies, peerDependencies}) => {
-              const rootPackageName = name || `<workspace root>`;
+        from(readJson(path.resolve(workspaceRoot, 'package.json'))).pipe(map((packageJson) => {
+          const rootPackageName = packageJson.name || `<workspace root>`;
 
-              return {
-                workspaceDirectory: workspaceRoot,
-                rootPackageName,
-                packages: (new Map<string, PackageInfo>()).set(rootPackageName, {
-                  packageName: rootPackageName,
-                  version,
+          return {
+            workspaceDirectory: workspaceRoot,
+            rootPackageName,
+            packages: (new Map<string, PackageInfo>()).set(rootPackageName, {
+              packageName: rootPackageName,
+              version: packageJson.version,
+              private: packageJson.private || false,
 
-                  location: '.',
+              location: '.',
 
-                  workspaceDependencies: [],
-                  mismatchedWorkspaceDependencies: [],
+              workspaceDependencies: [],
+              mismatchedWorkspaceDependencies: [],
 
-                  peerDependencies,
-                  dependencies,
-                  devDependencies,
-                }),
-              } as WorkspaceInfo;
-            }));
+              peerDependencies: packageJson.peerDependencies,
+              dependencies: packageJson.dependencies,
+              devDependencies: packageJson.devDependencies,
+            }),
+          } as WorkspaceInfo;
+        }));
 
     if (!isWorkspace) {
       return workspaceInfo;
@@ -145,6 +147,7 @@ export function getWorkspace(cwd: string): Observable<WorkspaceInfo> {
                              const packageInfo: PackageInfo = {
                                packageName,
                                version: packageJson.version,
+                               private: packageJson.private || false,
 
                                location: yarnPackageInfo.location,
                                workspaceDependencies: yarnPackageInfo.workspaceDependencies,

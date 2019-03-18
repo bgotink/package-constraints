@@ -39,6 +39,14 @@ package(PackageName).
 
 This rule matches all packages in your workspace.
 
+### `private_package/1`
+
+```prolog
+private_package(PackageName).
+```
+
+This rule matches all private packages in your workspace.
+
 ### `root_package/1`
 
 ```prolog

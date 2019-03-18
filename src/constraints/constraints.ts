@@ -55,6 +55,10 @@ export class Constraints {
       consult`package_location(${escape(workspace.packageName)}, ${escape(workspace.location)}).`;
       consult`package_version(${escape(workspace.packageName)}, ${escape(workspace.version)}).`;
 
+      if (workspace.private) {
+        consult`private_package(${escape(workspace.packageName)}).`;
+      }
+
       for (const type of
                [DependencyType.Dependencies,
                 DependencyType.PeerDependencies,
@@ -67,6 +71,10 @@ export class Constraints {
     }
 
     consult`root_package(${escape(this.workspace.rootPackageName)}).`;
+
+    // Explicitly add a default private_package predicate, to allow constraint files to use the
+    // predicate even if no private package exists (e.g. in a shared file)
+    consult`private_package(_):- false.`;
 
     return database.join('\n');
   }
