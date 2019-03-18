@@ -60,9 +60,17 @@ interface PackageJson {
 }
 
 function execYarn(args: string[], cwd: string): Observable<string> {
-  return defer(
-             () =>
-                 execa('yarn', ['--silent', ...args], {cwd, stdio: ['ignore', 'pipe', 'inherit']}))
+  return defer(() => execa('yarn', ['--silent', ...args], {
+                 cwd,
+                 stdio: ['ignore', 'pipe', 'inherit'],
+                 env: {
+                   // Set FORCE_COLOR to 0 to force the spawned yarn's chalk to not use colours. Our
+                   // environment might contain FORCE_COLOR=1 (e.g. when in an environment that
+                   // chalk doesn't recognize as "supports colour"). We can not have colouring in
+                   // the JSON as we need to parse it.
+                   FORCE_COLOR: '0',
+                 },
+               }))
       .pipe(map(result => result.stdout));
 }
 
