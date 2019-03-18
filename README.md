@@ -24,6 +24,56 @@ It is not compatible with `berry`, but that is subject to change.
 
 ```bash
 yarn add -D package-constraints
+# or
+npm install -D package-constraints
+```
+
+## Usage
+
+We'll assume you use yarn throughout this usage guide. Replace `yarn` with `npx` if you're using
+npm.
+
+```bash
+yarn constraints check
+```
+
+This command will validate the constraints and log errors and a final result to stderr. If errors
+are found, the process will exit with a non-zero exit code.
+
+The following options are available:
+
+- `--quiet`: don't log errors and final result to stderr
+- `--without-exit-code`: always exit with code `0` unless an unexpected error occurs, i.e. this will
+  make the command exit "successfully" if constraints are violated but it will exit with a non-zero
+  exit code if the constraints file is missing.
+- `--format`: Change the output format, the only supported value is [`tap`](https://testanything.org/).
+  If a format is passed, the output of `constraints` will be sent to stdout instead of stderr.
+- `--output-file FILE...`: Log output to file(s). Pass the option more than once to output to
+  multiple files. This option will add an initial output to the process, i.e. setting an output file
+  will not change whether the process logs the result via stdout/stderr. The `FILE` parameter may be
+  prefixed with a format, separated from the file path with a colon `:`.
+
+Example usage:
+
+```bash
+yarn constraints check --without-exit-code --output-file tap:/dev/fd/1 \
+      | yarn tap-junit -n constraints.xml
+```
+
+To help with debugging your constraints, you can generate the full constraints file using
+
+```bash
+# to output via stdio, e.g. to pipe to another process
+yarn constraints generate
+# or to store in a file
+yarn constraints generate full-constraints.pl
+```
+
+You can then inspect the resulting prolog, or load it into a prolog engine to run some queries, e.g.
+
+```bash
+yarn constraints generate full-constraints.pl
+swipl -f full-constraints.pl
 ```
 
 ## Rules
@@ -106,7 +156,7 @@ This rule is queried for every workspace package and every dependency type. The 
 are compared with the actual dependencies listed in the workspace. If a difference is found, a
 violation will be logged.
 
-Use a `DependencyVersion` value of `null` to mark a package as not allowed.
+Use a `DependencyVersion` value of `null` to mark a dependency as not allowed.
 
 ### `gen_invalid_dependency/4`
 
