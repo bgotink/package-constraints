@@ -13,7 +13,7 @@ function writeFile(filepath: string, content: string) {
 
 export default (concierge: any) =>
     concierge
-        .command(`generate [-o,--out-file FILE]`)
+        .command(`generate [output-file]`)
 
         .describe(`generate the full constraints file`)
 
@@ -25,12 +25,12 @@ export default (concierge: any) =>
   For more information as to how to write constraints, please consult our manual: TODO.
 `)
 
+        .example(`Generate the full constraints`, `yarn constraints generate`)
         .example(
-            `Generate the full constraints file`,
-            `yarn constraints generate full-constraints.pl`,
-            )
+            `Generate the full constraints and store to the file called "full-constraints.pl"`,
+            `yarn constraints generate full-constraints.pl`)
 
-        .action(async ({outFile}: {outFile?: string}) => {
+        .action(async ({outputFile}: {outputFile?: string}) => {
           const cwd = process.cwd();
 
           const workspaceInfo = await getWorkspace(cwd).toPromise();
@@ -38,11 +38,11 @@ export default (concierge: any) =>
 
           const fullSource = await constraints.getFullSource();
 
-          if (!outFile) {
+          if (!outputFile) {
             console.log(fullSource);
           } else {
-            await writeFile(path.resolve(outFile), fullSource);
+            await writeFile(path.resolve(outputFile), fullSource);
 
-            console.error(`Generated full source at ${chalk.bold.hex('#00afaf')(outFile)}`);
+            console.error(`Generated full source at ${chalk.bold.hex('#009985')(outputFile)}`);
           }
         });
