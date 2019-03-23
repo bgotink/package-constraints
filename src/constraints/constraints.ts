@@ -53,9 +53,10 @@ export class Constraints {
     for (const workspace of Array.from(this.workspace.packages.values()).sort(sortByName)) {
       consult`package(${escape(workspace.packageName)}).`;
       consult`package_location(${escape(workspace.packageName)}, ${escape(workspace.location)}).`;
-      consult`package_version(${escape(workspace.packageName)}, ${escape(workspace.version)}).`;
+      consult`package_version(${escape(workspace.packageName)}, ${
+          escape(workspace.manifest.version)}).`;
 
-      if (workspace.private) {
+      if (workspace.manifest.private) {
         consult`private_package(${escape(workspace.packageName)}).`;
       }
 
@@ -63,7 +64,8 @@ export class Constraints {
                [DependencyType.Dependencies,
                 DependencyType.PeerDependencies,
                 DependencyType.DevDependencies]) {
-        for (const [dependency, dependencyVersion] of Object.entries(workspace[type] || {})) {
+        for (const [dependency, dependencyVersion] of Object.entries(
+                 workspace.manifest[type] || {})) {
           consult`package_has_dependency(${escape(workspace.packageName)}, ${escape(dependency)}, ${
               escape(dependencyVersion)}, ${type}).`;
         }

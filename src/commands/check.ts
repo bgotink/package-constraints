@@ -112,7 +112,7 @@ export default (concierge: any) =>
                        dependencyRange: enforcedDependencyRange,
                        dependencyType
                      } of sortEnforcedDependencyRanges(enforcedDependencyRanges)) {
-                  const deps = packageInfo[dependencyType];
+                  const deps = packageInfo.manifest[dependencyType];
                   const actualDependencyRange = deps && deps[dependencyName];
 
                   if (enforcedDependencyRange !== null) {
@@ -154,7 +154,7 @@ export default (concierge: any) =>
 
                 for (const {dependencyName, dependencyType, reason} of sortInvalidDependencies(
                          invalidDependencies)) {
-                  const deps = packageInfo[dependencyType];
+                  const deps = packageInfo.manifest[dependencyType];
                   const dependencyDescriptor = deps && deps[dependencyName];
 
                   if (dependencyDescriptor) {

@@ -7,7 +7,7 @@ import {flatMap, map, mapTo, mergeMap, tap} from 'rxjs/operators';
 
 import {readFile} from './util';
 
-export interface YarnPackageInfo {
+interface YarnWorkspaceInfo {
   location: string;
 
   workspaceDependencies: string[];
@@ -15,25 +15,14 @@ export interface YarnPackageInfo {
   mismatchedWorkspaceDependencies: string[];
 }
 
-export interface YarnWorkspaceInfo {
-  [packageName: string]: YarnPackageInfo;
+interface YarnWorkspacesInfo {
+  [packageName: string]: YarnWorkspaceInfo;
 }
 
-export interface PackageInfo {
+export interface PackageInfo extends YarnWorkspaceInfo {
   packageName: string;
 
-  version: string;
-
-  private: boolean;
-  location: string;
-
-  workspaceDependencies: string[];
-
-  mismatchedWorkspaceDependencies: string[];
-
-  dependencies?: Dependencies;
-  devDependencies?: Dependencies;
-  peerDependencies?: Dependencies;
+  manifest: PackageManifest;
 }
 
 export interface WorkspaceInfo {
@@ -47,7 +36,7 @@ export interface Dependencies {
   [packageName: string]: string;
 }
 
-interface PackageJson {
+export interface PackageManifest {
   name: string;
   version: string;
   private?: boolean;
@@ -74,7 +63,7 @@ function execYarn(args: string[], cwd: string): Observable<string> {
       .pipe(map(result => result.stdout));
 }
 
-async function readJson(filepath: string): Promise<PackageJson> {
+async function readJson(filepath: string): Promise<PackageManifest> {
   return JSON.parse(await readFile(filepath, 'utf8'));
 }
 
@@ -112,28 +101,24 @@ async function getWorkspaceRoot(cwd: string) {
 export function getWorkspace(cwd: string): Observable<WorkspaceInfo> {
   return from(getWorkspaceRoot(cwd)).pipe(flatMap(({workspaceRoot, isWorkspace}) => {
     const workspaceInfo =
-        from(readJson(path.resolve(workspaceRoot, 'package.json'))).pipe(map((packageJson) => {
-          const rootPackageName = packageJson.name || `<workspace root>`;
+        from(readJson(path.resolve(workspaceRoot, 'package.json')))
+            .pipe(map((rootPackageManifest) => {
+              const rootPackageName = rootPackageManifest.name || `<workspace root>`;
 
-          return {
-            workspaceDirectory: workspaceRoot,
-            rootPackageName,
-            packages: (new Map<string, PackageInfo>()).set(rootPackageName, {
-              packageName: rootPackageName,
-              version: packageJson.version,
-              private: packageJson.private || false,
+              return {
+                workspaceDirectory: workspaceRoot,
+                rootPackageName,
+                packages: (new Map<string, PackageInfo>()).set(rootPackageName, {
+                  packageName: rootPackageName,
+                  location: '.',
 
-              location: '.',
+                  workspaceDependencies: [],
+                  mismatchedWorkspaceDependencies: [],
 
-              workspaceDependencies: [],
-              mismatchedWorkspaceDependencies: [],
-
-              peerDependencies: packageJson.peerDependencies,
-              dependencies: packageJson.dependencies,
-              devDependencies: packageJson.devDependencies,
-            }),
-          } as WorkspaceInfo;
-        }));
+                  manifest: rootPackageManifest,
+                }),
+              } as WorkspaceInfo;
+            }));
 
     if (!isWorkspace) {
       return workspaceInfo;
@@ -142,7 +127,7 @@ export function getWorkspace(cwd: string): Observable<WorkspaceInfo> {
     return forkJoin(
                workspaceInfo,
                execYarn(['workspaces', 'info'], workspaceRoot)
-                   .pipe(map(result => JSON.parse(result) as YarnWorkspaceInfo)),
+                   .pipe(map(result => JSON.parse(result) as YarnWorkspacesInfo)),
                )
         .pipe(mergeMap(([workspaceInfo, yarnWorkspaceInfo]) => {
           return forkJoin(
@@ -151,20 +136,12 @@ export function getWorkspace(cwd: string): Observable<WorkspaceInfo> {
 
                        return from(readJson(path.resolve(
                                        workspaceRoot, yarnPackageInfo.location, 'package.json')))
-                           .pipe(tap(packageJson => {
+                           .pipe(tap(manifest => {
                              const packageInfo: PackageInfo = {
+                               ...yarnPackageInfo,
+
                                packageName,
-                               version: packageJson.version,
-                               private: packageJson.private || false,
-
-                               location: yarnPackageInfo.location,
-                               workspaceDependencies: yarnPackageInfo.workspaceDependencies,
-                               mismatchedWorkspaceDependencies:
-                                   yarnPackageInfo.mismatchedWorkspaceDependencies,
-
-                               peerDependencies: packageJson.peerDependencies,
-                               dependencies: packageJson.dependencies,
-                               devDependencies: packageJson.devDependencies,
+                               manifest,
                              };
 
                              workspaceInfo.packages.set(packageName, packageInfo);
