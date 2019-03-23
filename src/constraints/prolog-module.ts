@@ -33,7 +33,7 @@ export function registerModule(session: pl.type.Session) {
           return;
         }
 
-        if (!is_variable) {
+        if (!is_variable(packageName)) {
           thread.throw_error(pl.error.instantiation(atom.indicator));
           return;
         }
