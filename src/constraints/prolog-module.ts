@@ -17,9 +17,9 @@ export function registerModule(session: pl.type.Session) {
 
     const predicates: Record<string, pl.type.Predicate> = {
       'dependency_type/1': [
-        new pl.type.Rule(new pl.type.Term('dependency_type', [new pl.type.Term('dependencies')]), null),
-        new pl.type.Rule(new pl.type.Term('dependency_type', [new pl.type.Term('devDependencies')]), null),
-        new pl.type.Rule(new pl.type.Term('dependency_type', [new pl.type.Term('peerDependencies')]), null),
+        new pl.type.Rule(new pl.type.Term('dependency_type', [new pl.type.Term(DependencyType.Dependencies)]), null),
+        new pl.type.Rule(new pl.type.Term('dependency_type', [new pl.type.Term(DependencyType.DevDependencies)]), null),
+        new pl.type.Rule(new pl.type.Term('dependency_type', [new pl.type.Term(DependencyType.PeerDependencies)]), null),
       ],
 
       'package/1': (thread, point, atom) => {
