@@ -1,9 +1,8 @@
 import * as path from 'path';
 
 import {readFile} from '../util';
-import {PackageInfo, WorkspaceInfo} from '../workspace';
+import {WorkspaceInfo} from '../workspace';
 
-import {DependencyType} from './constants';
 import {ConstraintProcessor} from './constraint-processor';
 
 async function loadConstraints(directory: string) {
@@ -22,63 +21,11 @@ async function loadConstraints(directory: string) {
   throw new Error(`Couldn't find constraints.pl or constraints.pro to load in ${directory}`);
 }
 
-function sortByName(a: PackageInfo, b: PackageInfo): number {
-  const aName = a.packageName;
-  const bName = b.packageName;
-
-  if (aName === bName) {
-    return 0;
-  }
-  return aName < bName ? -1 : 1;
-}
-
 export class Constraints {
   public readonly source: Promise<string>;
 
   constructor(project: string, private readonly workspace: WorkspaceInfo) {
     this.source = loadConstraints(project);
-  }
-
-  getProjectDatabase() {
-    const database: string[] = [];
-
-    function consult(tpl: TemplateStringsArray, ...values: any[]): void {
-      database.push(String.raw(tpl, ...values).trim());
-    }
-
-    consult`dependency_type(${DependencyType.Dependencies}).`;
-    consult`dependency_type(${DependencyType.DevDependencies}).`;
-    consult`dependency_type(${DependencyType.PeerDependencies}).`;
-
-    for (const workspace of Array.from(this.workspace.packages.values()).sort(sortByName)) {
-      consult`package(${escape(workspace.packageName)}).`;
-      consult`package_location(${escape(workspace.packageName)}, ${escape(workspace.location)}).`;
-      consult`package_version(${escape(workspace.packageName)}, ${
-          escape(workspace.manifest.version)}).`;
-
-      if (workspace.manifest.private) {
-        consult`private_package(${escape(workspace.packageName)}).`;
-      }
-
-      for (const type of
-               [DependencyType.Dependencies,
-                DependencyType.PeerDependencies,
-                DependencyType.DevDependencies]) {
-        for (const [dependency, dependencyVersion] of Object.entries(
-                 workspace.manifest[type] || {})) {
-          consult`package_has_dependency(${escape(workspace.packageName)}, ${escape(dependency)}, ${
-              escape(dependencyVersion)}, ${type}).`;
-        }
-      }
-    }
-
-    consult`root_package(${escape(this.workspace.rootPackageName)}).`;
-
-    // Explicitly add a default private_package predicate, to allow constraint files to use the
-    // predicate even if no private package exists (e.g. in a shared file)
-    consult`private_package(_):- false.`;
-
-    return database.join('\n');
   }
 
   getDeclarations(): string {
@@ -98,19 +45,10 @@ export class Constraints {
   }
 
   async getFullSource(): Promise<string> {
-    return this.getProjectDatabase() + `\n` + await this.source + `\n` + this.getDeclarations() +
-        '\n';
+    return await this.source + `\n` + this.getDeclarations() + '\n';
   }
 
   async process() {
     return new ConstraintProcessor(this.workspace, await this.getFullSource());
-  }
-}
-
-function escape(what: string|null) {
-  if (typeof what === `string`) {
-    return `'${what}'`;
-  } else {
-    return `[]`;
   }
 }

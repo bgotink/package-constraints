@@ -123,12 +123,12 @@ declare module 'tau-prolog' {
 
         public readonly head: Term<number, string>;
 
-        public readonly body: Term<number, string>[];
+        public readonly body: Term<number, string>|null;
 
         public readonly dynamic: boolean;
 
         public constructor(
-            head: Term<number, string>, body: Term<number, string>[], dynamic?: boolean);
+            head: Term<number, string>, body: Term<number, string>|null, dynamic?: boolean);
 
         public clone(): this;
 
@@ -169,6 +169,8 @@ declare module 'tau-prolog' {
         public prepend(states: State[]): void;
 
         public throw_error(error: Term<1, 'error'>): void;
+
+        public success(state: State, parent?: State): void;
       }
 
       class Thread {
@@ -200,6 +202,8 @@ declare module 'tau-prolog' {
         public prepend(states: State[]): void;
 
         public throw_error(error: Term<1, 'error'>): void;
+
+        public success(state: State, parent?: State): void;
       }
 
       interface PredicateFn {
