@@ -1,6 +1,8 @@
 import {Observable} from 'rxjs';
 import {map} from 'rxjs/operators';
 
+import {WorkspaceInfo} from '../workspace';
+
 import {DependencyType} from './constants';
 import {Engine} from './engine';
 
@@ -21,8 +23,8 @@ export interface InvalidDependency {
 export class ConstraintProcessor {
   private readonly _engine: Engine;
 
-  constructor(source: string) {
-    this._engine = new Engine();
+  constructor(workspacesInfo: WorkspaceInfo, source: string) {
+    this._engine = new Engine(workspacesInfo);
     this._engine.consult(source);
   }
 

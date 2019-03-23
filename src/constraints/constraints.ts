@@ -103,7 +103,7 @@ export class Constraints {
   }
 
   async process() {
-    return new ConstraintProcessor(await this.getFullSource());
+    return new ConstraintProcessor(this.workspace, await this.getFullSource());
   }
 }
 

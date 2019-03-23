@@ -1,13 +1,21 @@
 import {Observable} from 'rxjs';
 import * as pl from 'tau-prolog';
 
+import {WorkspaceInfo} from '../workspace';
+
+import {registerModule, setWorkspacesInfo} from './prolog-module';
+
 export type Answer = Record<string, any>;
 
 export class Engine {
   private session: pl.type.Session;
 
-  public constructor() {
+  public constructor(workspacesInfo: WorkspaceInfo) {
+
     this.session = pl.create(1_000_000);
+
+    registerModule(this.session);
+    setWorkspacesInfo(this.session, workspacesInfo);
   }
 
   consult(program: string): void {
@@ -35,13 +43,10 @@ export class Engine {
           return;
         }
 
-        observer.next(
-          Object.entries(answer.links)
-            .reduce((answer, [key, value]) => {
-              answer[key] = value.id === 'null' ? null : value.toJavaScript();
-              return answer;
-            }, {} as Answer)
-        );
+        observer.next(Object.entries(answer.links).reduce((answer, [key, value]) => {
+          answer[key] = value.id === 'null' ? null : value.toJavaScript();
+          return answer;
+        }, {} as Answer));
 
         next();
       });
