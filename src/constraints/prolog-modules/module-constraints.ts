@@ -6,15 +6,13 @@ import {getWorkspaceInfo} from './workspace-info';
 
 let registeredModule: pl.type.Module|null = null;
 
-export function getModuleName(): string {
-  if (registeredModule == null) {
-    registerModule();
+export const MODULE_NAME = 'constraints';
+
+export function registerModule() {
+  if (registeredModule != null) {
+    return;
   }
 
-  return registeredModule!.id;
-}
-
-function registerModule() {
   const {is_atom, is_variable} = pl.type;
 
   const predicates: Record<string, pl.type.Predicate> = {
@@ -200,7 +198,7 @@ function registerModule() {
     },
   };
 
-  const exports = [
+  const moduleExports = [
     'dependency_type/1',
     'package/1',
     'package_field/3',
@@ -210,5 +208,5 @@ function registerModule() {
     'root_package/1',
   ];
 
-  registeredModule = new pl.type.Module('constraints', predicates, exports);
+  registeredModule = new pl.type.Module(MODULE_NAME, predicates, moduleExports);
 }

@@ -3,7 +3,7 @@ import * as pl from 'tau-prolog';
 
 import {WorkspaceInfo} from '../workspace';
 
-import {registerModule} from './prolog-module';
+import {registerModules} from './prolog-modules';
 
 export type Answer = Record<string, any>;
 
@@ -11,10 +11,9 @@ export class Engine {
   private session: pl.type.Session;
 
   public constructor(workspacesInfo: WorkspaceInfo) {
-
     this.session = pl.create(1_000_000);
 
-    registerModule(this.session, workspacesInfo);
+    registerModules(this.session, workspacesInfo);
   }
 
   consult(program: string): void {
