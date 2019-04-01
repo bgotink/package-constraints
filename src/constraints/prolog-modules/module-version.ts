@@ -2,16 +2,11 @@ import * as semver from 'semver';
 import * as pl from 'tau-prolog';
 
 import {replaceGoal, termEquals} from './prolog-util';
-
-let registeredModule: pl.type.Module|null = null;
+import {once} from './util';
 
 export const MODULE_NAME = 'version';
 
-export function registerModule() {
-  if (registeredModule != null) {
-    return;
-  }
-
+export const registerModule = once(() => {
   const {is_atom} = pl.type;
 
   const predicates: Record<string, pl.type.Predicate> = {
@@ -48,5 +43,5 @@ export function registerModule() {
     'version_minimum/2',
   ];
 
-  registeredModule = new pl.type.Module(MODULE_NAME, predicates, moduleExports);
-}
+  return new pl.type.Module(MODULE_NAME, predicates, moduleExports);
+});

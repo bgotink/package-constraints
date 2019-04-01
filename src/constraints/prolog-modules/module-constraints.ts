@@ -1,18 +1,14 @@
 import * as pl from 'tau-prolog';
 
 import {DependencyType} from '../constants';
-import {and, replaceGoal, rule, term, termEquals, variable} from './prolog-util';
-import {getWorkspaceInfo} from './workspace-info';
 
-let registeredModule: pl.type.Module|null = null;
+import {and, replaceGoal, rule, term, termEquals, variable} from './prolog-util';
+import {once} from './util';
+import {getWorkspaceInfo} from './workspace-info';
 
 export const MODULE_NAME = 'constraints';
 
-export function registerModule() {
-  if (registeredModule != null) {
-    return;
-  }
-
+export const registerModule = once(() => {
   const {is_atom, is_variable} = pl.type;
 
   const predicates: Record<string, pl.type.Predicate> = {
@@ -208,5 +204,5 @@ export function registerModule() {
     'root_package/1',
   ];
 
-  registeredModule = new pl.type.Module(MODULE_NAME, predicates, moduleExports);
-}
+  return new pl.type.Module(MODULE_NAME, predicates, moduleExports);
+});
