@@ -1,7 +1,7 @@
 import * as pl from 'tau-prolog';
 
 import {DependencyType} from '../constants';
-import {and, replaceGoal, rule, term, termEquals, variable} from './util';
+import {and, replaceGoal, rule, term, termEquals, variable} from './prolog-util';
 import {getWorkspaceInfo} from './workspace-info';
 
 let registeredModule: pl.type.Module|null = null;

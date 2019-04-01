@@ -1,7 +1,7 @@
 import * as semver from 'semver';
 import * as pl from 'tau-prolog';
 
-import {replaceGoal, termEquals} from './util';
+import {replaceGoal, termEquals} from './prolog-util';
 
 let registeredModule: pl.type.Module|null = null;
 
