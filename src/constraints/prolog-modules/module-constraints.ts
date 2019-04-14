@@ -30,7 +30,7 @@ export const registerModule = once(() => {
       }
 
       if (!is_variable(packageName)) {
-        thread.throw_error(pl.error.instantiation(atom.indicator));
+        thread.throwError(pl.error.instantiation(atom.indicator));
         return;
       }
 
@@ -48,7 +48,7 @@ export const registerModule = once(() => {
       const [packageName, fieldName, fieldValue] = atom.args;
 
       if (!is_atom(packageName) || !is_atom(fieldName)) {
-        thread.throw_error(pl.error.instantiation(atom.indicator));
+        thread.throwError(pl.error.instantiation(atom.indicator));
         return;
       }
 
@@ -84,7 +84,7 @@ export const registerModule = once(() => {
 
       if (is_variable(packageName)) {
         if (!is_atom(packageLocation)) {
-          thread.throw_error(pl.error.instantiation(atom.indicator));
+          thread.throwError(pl.error.instantiation(atom.indicator));
           return;
         }
 
@@ -102,7 +102,7 @@ export const registerModule = once(() => {
       }
 
       if (!is_atom(packageName) || !(is_atom(packageLocation) || is_variable(packageLocation))) {
-        thread.throw_error(pl.error.instantiation(atom.indicator));
+        thread.throwError(pl.error.instantiation(atom.indicator));
         return;
       }
 
@@ -147,7 +147,7 @@ export const registerModule = once(() => {
       const [packageName, dependencyName, dependencyVersion, dependencyType] = atom.args;
 
       if (!is_atom(packageName) || !is_atom(dependencyType)) {
-        thread.throw_error(pl.error.instantiation(atom.indicator));
+        thread.throwError(pl.error.instantiation(atom.indicator));
         return;
       }
 
@@ -170,7 +170,7 @@ export const registerModule = once(() => {
       }
 
       if (!is_variable(dependencyName)) {
-        thread.throw_error(pl.error.instantiation(atom.indicator));
+        thread.throwError(pl.error.instantiation(atom.indicator));
       }
 
       thread.prepend(

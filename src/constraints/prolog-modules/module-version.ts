@@ -14,7 +14,7 @@ export const registerModule = once(() => {
       const [range, version] = atom.args;
 
       if (!is_atom(range) || !is_atom(version)) {
-        thread.throw_error(pl.error.instantiation(atom.indicator));
+        thread.throwError(pl.error.instantiation(atom.indicator));
         return;
       }
 
@@ -27,7 +27,7 @@ export const registerModule = once(() => {
       const [range, version] = atom.args;
 
       if (!is_atom(range)) {
-        thread.throw_error(pl.error.instantiation(atom.indicator));
+        thread.throwError(pl.error.instantiation(atom.indicator));
         return;
       }
 
