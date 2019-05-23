@@ -21,6 +21,8 @@ export class Engine {
   }
 
   query(query: string): Observable<Answer> {
+    const resolved = Promise.resolve();
+
     return new Observable<Answer>(observer => {
       let stop = false;
 
@@ -46,11 +48,11 @@ export class Engine {
           return answer;
         }, {} as Answer));
 
-        next();
+        resolved.then(next);
       });
 
       this.session.query(query);
-      next();
+      resolved.then(next);
 
       return () => stop = true;
     });
