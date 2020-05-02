@@ -69,7 +69,7 @@ async function readJson(filepath: string): Promise<PackageManifest> {
 
 async function getWorkspaceRoot(cwd: string) {
   let currentDirectory = cwd;
-  let firstPackage: string|null = null;
+  let firstPackage: string|undefined = undefined;
 
   while (true) {
     const packageJsonPath = await findUp('package.json', {cwd: currentDirectory});
