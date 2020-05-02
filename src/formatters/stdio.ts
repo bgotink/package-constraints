@@ -40,8 +40,8 @@ export class StdioFormatter implements Formatter {
   private _prettier: Prettier;
 
   public constructor(private readonly _sink: Writable) {
-    this._prettier = new Prettier(
-        (_sink as WriteStream).isTTY ? chalk : new chalk.Instance({level: 0}));
+    this._prettier =
+        new Prettier((_sink as WriteStream).isTTY ? chalk : new chalk.Instance({level: 0}));
   }
 
   private _logError(strings: TemplateStringsArray, ...values: string[]): void {

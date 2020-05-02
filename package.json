@@ -25,7 +25,7 @@
   "devDependencies": {
     "@types/fs-extra": "5.0.5",
     "@types/json5": "0.0.30",
-    "clang-format": "1.2.4",
+    "clang-format": "1.4.0",
     "typescript": "3.8.3"
   }
 }
