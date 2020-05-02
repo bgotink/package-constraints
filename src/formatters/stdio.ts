@@ -1,4 +1,4 @@
-import chalk, {Chalk} from 'chalk';
+import * as chalk from 'chalk';
 import {Writable} from 'stream';
 import {WriteStream} from 'tty';
 
@@ -7,15 +7,15 @@ import {DependencyType} from '../constraints';
 import {Formatter} from './formatter';
 
 class Prettier {
-  private readonly _packageName: Chalk;
-  private readonly _packageScope: Chalk;
+  private readonly _packageName: chalk.Chalk;
+  private readonly _packageScope: chalk.Chalk;
 
-  public readonly version: Chalk;
-  public readonly type: Chalk;
-  public readonly reason: Chalk;
-  public readonly error: Chalk;
+  public readonly version: chalk.Chalk;
+  public readonly type: chalk.Chalk;
+  public readonly reason: chalk.Chalk;
+  public readonly error: chalk.Chalk;
 
-  public constructor(chalk: Chalk) {
+  public constructor(chalk: chalk.Chalk) {
     this._packageName = chalk.hex('#ee7105');
     this._packageScope = chalk.hex('#ffa726');
     this.version = chalk.bold.hex('#009985');
@@ -41,7 +41,7 @@ export class StdioFormatter implements Formatter {
 
   public constructor(private readonly _sink: Writable) {
     this._prettier = new Prettier(
-        (_sink as WriteStream).isTTY ? chalk : new chalk.constructor({enabled: false}));
+        (_sink as WriteStream).isTTY ? chalk : new chalk.Instance({level: 0}));
   }
 
   private _logError(strings: TemplateStringsArray, ...values: string[]): void {
